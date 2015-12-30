@@ -1,23 +1,20 @@
-	var svg = createSVGElement(800,800);
-
+//Global Variables ================================================================
+	var svg = createSVGElement(800,800),
+		dimensions = calculateDimensions(svg,10),
+		square = new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"black","white"),
+		eat = [new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"green","white")],
+		timerFunction = null,
+		speed = 300,
+		direction;
+//Utils ===========================================================================
 	function getMin(num1,num2){
-		if (typeof num1 === "number"){
-			if (num1 < num2){
-				return num1;
-			}else{
-				return num2;
-			}
-		}else if(num1 instanceof Array){
+		if(num1 instanceof Array){
 			return Math.min.apply(null,num1);
 		}else{
-			return null;
+			return Math.min(num1,num2);
 		}
 	}
-
-	function createSVGNS(){
-		return "http://www.w3.org/2000/svg";
-	}
-
+//Create SVG Element ==============================================================
 	function createSVGElement(width,height){
 		var NS = createSVGNS(),
 			svg = document.createElementNS(NS,"svg");
@@ -32,6 +29,10 @@
 		return svg;
 	}
 
+	function createSVGNS(){
+		return "http://www.w3.org/2000/svg";
+	}
+//Work with DOM ===================================================================
 	function createDocumentFragment(element){
 		var fragment = document.createDocumentFragment(); //rewrite for multiple elements
 
@@ -48,7 +49,8 @@
 			parentNode.appendChild(fragment);
 		}
 	}
-//Rectangle
+//SVG Draw Figures ===============================================================
+//Rectangle constructor  =========================================================
 	function Rectangle(x,y,width,height,fillColor,strokeColor,strokeWidth){
 		this.x = x || 0;
 		this.y = y || 0;
@@ -82,17 +84,11 @@
 
 		return rect;
 	}
-
-	function appendElement(parentNode,element){
-		parentNode.appendChild(element);
-	}
-
-	function svgCreateGrid(svgEl,cellNum){
+//Calculate minWidth and minHeight ============================
+	function calculateDimensions(svgEl,cellNum){
 		var width = svgEl.getAttribute("width"),
 			height = svgEl.getAttribute("height"),
-			startX = 0,
-			startY = 0,
-			cellSideX,cellSideY,squareNum,square;
+			cellSideX,cellSideY;
 
 		if(width >= height){
 			cellSideX = width / cellNum;
@@ -102,33 +98,132 @@
 			cellSideY = height / cellNum;
 		}
 
-		squareNum = (width * height)/(cellSideX * cellSideY);
+		return {
+			cellSideX : cellSideX,
+			cellSideY : cellSideY
+		}
+	}
+//Create SVG Grid
+	function svgCreateGrid(svgEl,dim){ //change to Lines
+		var width = svgEl.getAttribute("width"),
+			height = svgEl.getAttribute("height"),
+			startX = 0,
+			startY = 0,
+			squareNum,square;
+
+		squareNum = (width * height)/(dim.cellSideX * dim.cellSideY);
 
 		for(var count = 1; count <= squareNum; count++){
-			square = new Rectangle(startX,startY,cellSideX,cellSideY);
+			square = new Rectangle(startX,startY,dim.cellSideX,dim.cellSideY);
 			svgEl.appendChild(svgCreateRectangle(square));
-			startX += cellSideX;
+			startX += dim.cellSideX;
 			if(startX == width){
+
 				startX = 0;
-				startY += cellSideY;
+				startY += dim.cellSideY;
 			}
 		}
 	}
+//checkDirection
+	function setDirection(direction){
+		switch (direction){
+			case "up": moveUp(svg,someVal);
+				break;
+			case "down": moveDown(svg,someVal);
+				break;
+			case "left": moveLeft(svg,someVal);
+				break;
+			case "right": moveRight(svg,someVal);
+				break;
+		}
+	}
 
-	svgCreateGrid(svg,10);
+	function moveRight(svgEl,element){
+		var currentX = Number(element.getAttribute("x"));
+		currentX += dimensions.cellSideX;
+		if (currentX == svgEl.getAttribute("width")){
+			currentX = 0;
+		}
+		element.setAttribute("x",currentX);
+	}
 
-	appendToDocumentFragment(createDocumentFragment(svg));
+	function moveLeft(svgEl,element){
+		var currentX = Number(element.getAttribute("x"));
+		currentX -= dimensions.cellSideX;
+		if (currentX < 0){
+			currentX = svgEl.getAttribute("width") - dimensions.cellSideX;
+		}
+		element.setAttribute("x",currentX);
+	}
+
+	function moveUp(svgEl,element){
+		var currentY = Number(element.getAttribute("y"));
+		currentY -= dimensions.cellSideY;
+		if (currentY < 0){
+			currentY = svgEl.getAttribute("height") - dimensions.cellSideY;
+		}
+		element.setAttribute("y",currentY);
+	}
+
+	function moveDown(svgEl,element){
+		var currentY = Number(element.getAttribute("y"));
+		currentY += dimensions.cellSideY;
+		if (currentY == svgEl.getAttribute("height")){
+			currentY = 0;
+		}
+		element.setAttribute("y",currentY);
+	}
+
+//Animations ===============================
+	function startAnimation() {
+		if(timerFunction == null) {
+			timerFunction = setInterval(animate, speed);
+		}
+	}
+
+	function stopAnimation() {
+		if(timerFunction != null){
+			clearInterval(timerFunction);
+			timerFunction = null;
+		}
+	}
+
+	function animate() {
+		switch (direction){
+			case "up": moveUp(svg,someVal);
+				break;
+			case "down": moveDown(svg,someVal);
+				break;
+			case "left": moveLeft(svg,someVal);
+				break;
+			case "right": moveRight(svg,someVal);
+				break;
+			default: moveRight(svg,someVal);
+		}
+	}
 
 	document.addEventListener("keydown",function(event){
 		var keyCode = event.keyCode;
 		switch(keyCode){
-			case 38: console.log("Up");
+			case 38:
+				direction = "up";
 				break;
-			case 40: console.log("Down");
+			case 40:
+				direction = "down";
 				break;
-			case 37: console.log("Left");
+			case 37:
+				direction = "left";
 				break;
-			case 39: console.log("Right");
+			case 39:
+				direction = "right";
 				break;
 		}
 	});
+
+	svgCreateGrid(svg,dimensions);
+	var someVal = svgCreateRectangle(square);
+	svg.appendChild(someVal);
+
+	startAnimation();
+
+	appendToDocumentFragment(createDocumentFragment(svg));
