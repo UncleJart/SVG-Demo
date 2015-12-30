@@ -2,7 +2,7 @@
 	var svg = createSVGElement(800,800),
 		dimensions = calculateDimensions(svg,10),
 		square = new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"black","white"),
-		eat = [new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"green","white")],
+		food = [new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"green","white")],
 		timerFunction = null,
 		speed = 300,
 		direction;
