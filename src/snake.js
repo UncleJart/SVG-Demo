@@ -1,18 +1,127 @@
-//Global Variables ================================================================
-	var svg = createSVGElement(800,800),
-		dimensions = calculateDimensions(svg,10),
-		square = new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"black","white"),
-		food = [new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"green","white")],
-		timerFunction = null,
-		speed = 300,
-		direction;
-//Utils ===========================================================================
-	function getMin(num1,num2){
-		if(num1 instanceof Array){
-			return Math.min.apply(null,num1);
-		}else{
-			return Math.min(num1,num2);
+//Main function========================================================
+	function startGame(){
+		var svgWidth = 800,
+			svgHeight = svgWidth,
+			numOfCells = 10,
+			svg = createSVGElement(svgWidth,svgHeight),
+			dimensions = calculateDimensions(svg,numOfCells),
+			gridPoints = generateGridPoints(dimensions,svgWidth,svgHeight),
+			snake = [],
+			snakeHeadElement = createSnakeHead(gridPoints,dimensions),
+			rotatePoints = [],
+			food = [new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"green","white")],
+			timerFunction = null,
+			speed = 600;
+
+		function getDirection(event){
+			var keyCode = event.keyCode,
+				snakeHead = snake[0],
+				direction;
+
+			function changeSnakeDirection(direction){
+				snakeHead = changeDirection(snakeHead,direction);
+				rotatePoints.push(saveRotatePoint(snakeHead,direction));
+			}
+
+			event.preventDefault();
+
+			switch(keyCode){
+				case 38:{
+					direction = "up";
+					if(checkDirection(snakeHead,direction)){
+						changeSnakeDirection(direction);
+					}
+					break;
+				}
+				case 40:{
+					direction = "down";
+					if(checkDirection(snakeHead,direction)){
+						changeSnakeDirection(direction);
+					}
+					break;
+				}
+				case 37:{
+					direction = "left";
+					if(checkDirection(snakeHead,direction)){
+						changeSnakeDirection(direction);
+					}
+					break;
+				}
+				case 39:{
+					direction = "right";
+					if(checkDirection(snakeHead,direction)){
+						changeSnakeDirection(direction);
+					}
+					break;
+				}
+			}
 		}
+
+//Draw Snake Head
+		function drawSnakeHead(svg,snakeHeadElement){
+			var snakeRect = svgCreateRectangle(snakeHeadElement),
+				snakeSection = {};
+
+			svg.appendChild(snakeRect);
+			snakeSection.rect = snakeRect;
+			snakeSection.direction = generateDirection();
+
+			snake.push(snakeSection);
+		}
+
+	//Animations ===============================
+		function startAnimation() {
+			if(timerFunction == null) {
+				timerFunction = setInterval(animate, speed);
+			}
+		}
+
+		function stopAnimation() {
+			if(timerFunction != null){
+				clearInterval(timerFunction);
+				timerFunction = null;
+			}
+		}
+
+		function animate() {
+			moveSnake(snake,dimensions,svgWidth,svgHeight);
+
+			rotatePoints.forEach(function(item,i,array){
+				var currSnakeEl = snake[item.num],
+						currSnakeElX,currSnakeElY;
+
+				if (item.num === snake.length){
+					array.splice(i,1);
+				}else{
+					currSnakeElX = Number(currSnakeEl.rect.getAttribute("x"));
+					currSnakeElY = Number(currSnakeEl.rect.getAttribute("y"));
+					if((currSnakeElX == item.x)&&(currSnakeElY == item.y)){
+						currSnakeEl = changeDirection(currSnakeEl,item.newDirection);
+					}
+					item.num++;
+				}
+			});
+		}
+
+		document.addEventListener("keydown",getDirection);
+
+		svgCreateGrid(svg,dimensions);
+
+		snake = [
+			{rect: svgCreateRectangle(new Rectangle(400,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
+			direction: "right"},
+			{rect: svgCreateRectangle(new Rectangle(320,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
+				direction: "right"}
+		];
+
+		snake.forEach(function(item){
+			svg.appendChild(item.rect);
+		});
+		/*drawSnakeHead(svg,snakeHeadElement); //goes to animate*/
+
+		appendToDocumentFragment(createDocumentFragment(svg));
+
+		startAnimation();
 	}
 //Create SVG Element ==============================================================
 	function createSVGElement(width,height){
@@ -63,24 +172,15 @@
 //Make Rectangle
 	function svgCreateRectangle(options){
 		var NS = createSVGNS(),
-			rect = document.createElementNS(NS,"rect"),
-			x,y,width,height,fillColor,strokeColor,strokeWidth;
+			rect = document.createElementNS(NS,"rect");
 
-			x = options.x;
-			y = options.y;
-			width = options.width;
-			height = options.height;
-			fillColor = options.fillColor;
-			strokeColor = options.strokeColor;
-			strokeWidth = options.strokeWidth;
-
-		rect.setAttribute("x",x);
-		rect.setAttribute("y",y);
-		rect.setAttribute("width",width);
-		rect.setAttribute("height",height);
-		rect.setAttribute("fill",fillColor);
-		rect.setAttribute("stroke",strokeColor);
-		rect.setAttribute("stroke-width",strokeWidth);
+		rect.setAttribute("x",options.x);
+		rect.setAttribute("y",options.y);
+		rect.setAttribute("width",options.width);
+		rect.setAttribute("height",options.height);
+		rect.setAttribute("fill",options.fillColor);
+		rect.setAttribute("stroke",options.strokeColor);
+		rect.setAttribute("stroke-width",options.strokeWidth);
 
 		return rect;
 	}
@@ -124,106 +224,139 @@
 			}
 		}
 	}
-//checkDirection
-	function setDirection(direction){
-		switch (direction){
-			case "up": moveUp(svg,someVal);
-				break;
-			case "down": moveDown(svg,someVal);
-				break;
-			case "left": moveLeft(svg,someVal);
-				break;
-			case "right": moveRight(svg,someVal);
-				break;
+//Create Snake
+	function createSnakeHead(gridPoints,dimensions){
+		var snakeHead,
+			xVals = gridPoints.x.length - 1,
+			yVals = gridPoints.y.length - 1,
+			x = gridPoints.x[getRoundedRandom(0,xVals,true)],
+			y = gridPoints.y[getRoundedRandom(0,yVals,true)];
+
+		snakeHead = new Rectangle(x,y,dimensions.cellSideX,dimensions.cellSideY,"#000000","#FFFFFF");
+
+		return snakeHead;
+	}
+
+	function generateGridPoints(dimensions,svgWidth,svgHeight){
+		var xGradePoints = [],
+			yGradePoints = [],
+			x = 0,
+			y = 0;
+
+		while (x < svgWidth){
+			xGradePoints.push(x);
+			x += dimensions.cellSideX;
+		}
+
+		while (y < svgHeight){
+			yGradePoints.push(y);
+			y += dimensions.cellSideY;
+		}
+
+		return {
+			x : xGradePoints,
+			y : yGradePoints
 		}
 	}
 
-	function moveRight(svgEl,element){
+	function generateDirection(){
+		var directions = ["up","down","right","left"];
+		return directions[getRoundedRandom(0,3,true)];
+	}
+
+//set Snake Element Direction
+	function setDirection(snakeRect,direction,dimensions,svgWidth,svgHeight){
+		switch (direction){
+			case "up": moveUp(snakeRect,dimensions,svgWidth);
+				break;
+			case "down": moveDown(snakeRect,dimensions,svgWidth);
+				break;
+			case "left": moveLeft(snakeRect,dimensions,svgHeight);
+				break;
+			case "right": moveRight(snakeRect,dimensions,svgHeight);
+				break;
+		}
+	}
+//Move Snake Element direction
+	function moveRight(element,dimensions,svgWidth){
 		var currentX = Number(element.getAttribute("x"));
 		currentX += dimensions.cellSideX;
-		if (currentX == svgEl.getAttribute("width")){
+		if (currentX === svgWidth){
 			currentX = 0;
 		}
 		element.setAttribute("x",currentX);
 	}
 
-	function moveLeft(svgEl,element){
+	function moveLeft(element,dimensions,svgWidth){
 		var currentX = Number(element.getAttribute("x"));
 		currentX -= dimensions.cellSideX;
 		if (currentX < 0){
-			currentX = svgEl.getAttribute("width") - dimensions.cellSideX;
+			currentX = svgWidth - dimensions.cellSideX;
 		}
 		element.setAttribute("x",currentX);
 	}
 
-	function moveUp(svgEl,element){
+	function moveUp(element,dimensions,svgHeight){
 		var currentY = Number(element.getAttribute("y"));
 		currentY -= dimensions.cellSideY;
 		if (currentY < 0){
-			currentY = svgEl.getAttribute("height") - dimensions.cellSideY;
+			currentY = svgHeight - dimensions.cellSideY;
 		}
 		element.setAttribute("y",currentY);
 	}
 
-	function moveDown(svgEl,element){
+	function moveDown(element,dimensions,svgHeight){
 		var currentY = Number(element.getAttribute("y"));
 		currentY += dimensions.cellSideY;
-		if (currentY == svgEl.getAttribute("height")){
+		if (currentY == svgHeight){
 			currentY = 0;
 		}
 		element.setAttribute("y",currentY);
 	}
+//Move All Snake Elements
+	function moveSnake(snake,dimensions,svgWidth,svgHeight){
+		snake.forEach(function(item){
+			setDirection(item.rect,item.direction,dimensions,svgWidth,svgHeight);
+		})
+	}
 
-//Animations ===============================
-	function startAnimation() {
-		if(timerFunction == null) {
-			timerFunction = setInterval(animate, speed);
+	function checkDirection(snakeElement,direction){
+		return snakeElement.direction !== direction
+	}
+
+	function saveRotatePoint(snakeHead,direction){
+
+		return {
+			x : Number(snakeHead.rect.getAttribute("x")),
+			y : Number(snakeHead.rect.getAttribute("y")),
+			num : 1,
+			newDirection : direction
+		};
+	}
+
+	function changeDirection(snakeElement,newDirection){
+		if (snakeElement.direction !== newDirection){
+			snakeElement.direction = newDirection;
+		}
+		return snakeElement;
+	}
+//Utils ===========================================================================
+	function getMin(num1,num2){
+		if(num1 instanceof Array){
+			return Math.min.apply(null,num1);
+		}else{
+			return Math.min(num1,num2);
 		}
 	}
 
-	function stopAnimation() {
-		if(timerFunction != null){
-			clearInterval(timerFunction);
-			timerFunction = null;
-		}
+	function getRandom(min, max) {
+		return Math.random() * (max - min) + min;
 	}
 
-	function animate() {
-		switch (direction){
-			case "up": moveUp(svg,someVal);
-				break;
-			case "down": moveDown(svg,someVal);
-				break;
-			case "left": moveLeft(svg,someVal);
-				break;
-			case "right": moveRight(svg,someVal);
-				break;
-			default: moveRight(svg,someVal);
-		}
+	function getRoundedRandom(min,max,rounded){
+		return rounded ?
+				Math.round(getRandom(min,max)) :
+				Math.floor(getRandom(min,max))
 	}
-
-	document.addEventListener("keydown",function(event){
-		var keyCode = event.keyCode;
-		switch(keyCode){
-			case 38:
-				direction = "up";
-				break;
-			case 40:
-				direction = "down";
-				break;
-			case 37:
-				direction = "left";
-				break;
-			case 39:
-				direction = "right";
-				break;
-		}
-	});
-
-	svgCreateGrid(svg,dimensions);
-	var someVal = svgCreateRectangle(square);
-	svg.appendChild(someVal);
-
-	startAnimation();
-
-	appendToDocumentFragment(createDocumentFragment(svg));
+//Start game========================
+startGame();
