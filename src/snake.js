@@ -85,22 +85,41 @@
 
 		function animate() {
 			moveSnake(snake,dimensions,svgWidth,svgHeight);
-
+		//If there is rotate point
 			rotatePoints.forEach(function(item,i,array){
-				var currSnakeEl = snake[item.num],
-						currSnakeElX,currSnakeElY;
+				var currSnakeEl = snake[item.num];
 
-				if (item.num === snake.length){
-					array.splice(i,1);
-				}else{
-					currSnakeElX = Number(currSnakeEl.rect.getAttribute("x"));
+				//Function which changes direction at rotate point
+				function rotateSnake(){
+					var currSnakeElX = Number(currSnakeEl.rect.getAttribute("x")),
 					currSnakeElY = Number(currSnakeEl.rect.getAttribute("y"));
+
 					if((currSnakeElX == item.x)&&(currSnakeElY == item.y)){
 						currSnakeEl = changeDirection(currSnakeEl,item.newDirection);
+						/*console.log(item.num,currSnakeEl.direction);*/
 					}
+					/*console.log(currSnakeElX,item.x,currSnakeElY,item.y,i);*/
 					item.num++;
 				}
+
+				if (array.length !== 0){
+					if(item.num === snake.length){
+						array.shift();
+						item = array[i];
+						if(item){
+							if(item.num === snake.length) {
+								array.shift();
+							}else{
+								currSnakeEl = snake[item.num];
+								rotateSnake();
+							}
+						}
+					}else{
+						rotateSnake();
+					}
+				}
 			});
+
 		}
 
 		document.addEventListener("keydown",getDirection);
@@ -111,6 +130,12 @@
 			{rect: svgCreateRectangle(new Rectangle(400,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
 			direction: "right"},
 			{rect: svgCreateRectangle(new Rectangle(320,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
+				direction: "right"},
+			{rect: svgCreateRectangle(new Rectangle(240,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
+				direction: "right"},
+			{rect: svgCreateRectangle(new Rectangle(160,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
+				direction: "right"},
+			{rect: svgCreateRectangle(new Rectangle(80,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
 				direction: "right"}
 		];
 
@@ -321,7 +346,27 @@
 	}
 
 	function checkDirection(snakeElement,direction){
-		return snakeElement.direction !== direction
+		var oppositeDirection;
+
+		switch (snakeElement.direction){
+			case "up":{
+				oppositeDirection = "down";
+				break;
+			}
+			case "down":{
+				oppositeDirection = "up";
+				break;
+			}
+			case "left":{
+				oppositeDirection = "right";
+				break;
+			}
+			case "right":{
+				oppositeDirection = "left";
+				break;
+			}
+		}
+		return (snakeElement.direction !== direction) && (oppositeDirection !== direction)
 	}
 
 	function saveRotatePoint(snakeHead,direction){
