@@ -7,11 +7,12 @@
 			dimensions = calculateDimensions(svg,numOfCells),
 			gridPoints = generateGridPoints(dimensions,svgWidth,svgHeight),
 			snake = [],
-			snakeHeadElement = createSnakeHead(gridPoints,dimensions),
+			snakeHeadElement = createSnakeElement(gridPoints,dimensions),
 			rotatePoints = [],
-			food = [new Rectangle(0,0,dimensions.cellSideX,dimensions.cellSideY,"green","white")],
+			food,
 			timerFunction = null,
-			speed = 600;
+			speed = 600,
+			timeout;
 
 		function getDirection(event){
 			var keyCode = event.keyCode,
@@ -23,50 +24,54 @@
 				rotatePoints.push(saveRotatePoint(snakeHead,direction));
 			}
 
-			event.preventDefault();
-
-			switch(keyCode){
-				case 38:{
-					direction = "up";
-					if(checkDirection(snakeHead,direction)){
-						changeSnakeDirection(direction);
-					}
-					break;
-				}
-				case 40:{
-					direction = "down";
-					if(checkDirection(snakeHead,direction)){
-						changeSnakeDirection(direction);
-					}
-					break;
-				}
-				case 37:{
-					direction = "left";
-					if(checkDirection(snakeHead,direction)){
-						changeSnakeDirection(direction);
-					}
-					break;
-				}
-				case 39:{
-					direction = "right";
-					if(checkDirection(snakeHead,direction)){
-						changeSnakeDirection(direction);
-					}
-					break;
+			function setDirection(snakeHead,direction){
+				if(checkDirection(snakeHead,direction)){
+					changeSnakeDirection(direction);
 				}
 			}
+
+			event.preventDefault();
+
+			clearTimeout(timeout);
+			timeout = setTimeout(function(){
+				switch(keyCode){
+					case 38:{
+						direction = "up";
+						setDirection(snakeHead,direction);
+						break;
+					}
+					case 40:{
+						direction = "down";
+						setDirection(snakeHead,direction);
+						break;
+					}
+					case 37:{
+						direction = "left";
+						setDirection(snakeHead,direction);
+						break;
+					}
+					case 39:{
+						direction = "right";
+						setDirection(snakeHead,direction);
+						break;
+					}
+				}
+			},180);
+
 		}
 
 //Draw Snake Head
-		function drawSnakeHead(svg,snakeHeadElement){
-			var snakeRect = svgCreateRectangle(snakeHeadElement),
+		function drawSnakeElement(svg,snakeElement,headElement){
+			var snakeRect = svgCreateRectangle(snakeElement),
 				snakeSection = {};
 
 			svg.appendChild(snakeRect);
-			snakeSection.rect = snakeRect;
-			snakeSection.direction = generateDirection();
+			if(headElement){
+				snakeSection.rect = snakeRect;
+				snakeSection.direction = generateDirection();
 
-			snake.push(snakeSection);
+				snake.push(snakeSection);
+			}
 		}
 
 	//Animations ===============================
@@ -120,6 +125,11 @@
 				}
 			});
 
+			if (!food){
+				food = generateFoodElement(gridPoints,dimensions,snake);
+				drawSnakeElement(svg,food);
+			}
+
 		}
 
 		document.addEventListener("keydown",getDirection);
@@ -142,7 +152,7 @@
 		snake.forEach(function(item){
 			svg.appendChild(item.rect);
 		});
-		/*drawSnakeHead(svg,snakeHeadElement); //goes to animate*/
+		/*drawSnakeElement(svg,snakeHeadElement,true); //goes to animate??*/
 
 		appendToDocumentFragment(createDocumentFragment(svg));
 
@@ -229,7 +239,7 @@
 		}
 	}
 //Create SVG Grid
-	function svgCreateGrid(svgEl,dim){ //change to Lines
+	function svgCreateGrid(svgEl,dim){ //reWrite to Lines           ===>!!!!!!!!!!!!!!!!!!!!!!!!
 		var width = svgEl.getAttribute("width"),
 			height = svgEl.getAttribute("height"),
 			startX = 0,
@@ -250,16 +260,19 @@
 		}
 	}
 //Create Snake
-	function createSnakeHead(gridPoints,dimensions){
-		var snakeHead,
+	function createSnakeElement(gridPoints,dimensions,fillColor,strokeColor){
+		var snakeElement,
 			xVals = gridPoints.x.length - 1,
 			yVals = gridPoints.y.length - 1,
 			x = gridPoints.x[getRoundedRandom(0,xVals,true)],
 			y = gridPoints.y[getRoundedRandom(0,yVals,true)];
 
-		snakeHead = new Rectangle(x,y,dimensions.cellSideX,dimensions.cellSideY,"#000000","#FFFFFF");
+		fillColor = fillColor || "#000000";
+		strokeColor = strokeColor || "#FFFFFF";
 
-		return snakeHead;
+		snakeElement = new Rectangle(x,y,dimensions.cellSideX,dimensions.cellSideY,fillColor,strokeColor);
+
+		return snakeElement;
 	}
 
 	function generateGridPoints(dimensions,svgWidth,svgHeight){
@@ -367,6 +380,25 @@
 			}
 		}
 		return (snakeElement.direction !== direction) && (oppositeDirection !== direction)
+	}
+//Generate food element
+	function generateFoodElement(gridPoints,dimensions,snake){
+		var food;
+
+		function checkCoordinates(item,i,array){
+			var currSnakeElX = Number(item.rect.getAttribute("x")),
+				currSnakeElY = Number(item.rect.getAttribute("y")),
+				foodX = Number(food.x),
+				foodY = Number(food.y);
+
+			return currSnakeElX === foodX && currSnakeElY == foodY
+		}
+
+		do {
+			food = createSnakeElement(gridPoints,dimensions,"green");
+		} while (snake.some(checkCoordinates));
+
+		return food;
 	}
 
 	function saveRotatePoint(snakeHead,direction){
