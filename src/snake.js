@@ -12,6 +12,10 @@
 			food,
 			timerFunction = null,
 			speed = 600,
+			speedUp = 20,
+			maxSpeed = 180,
+			score = 0,
+			scoreUp = 10,
 			timeout;
 
 		function getDirection(event){
@@ -56,22 +60,17 @@
 						break;
 					}
 				}
-			},180);
+			},maxSpeed);
 
 		}
 
 //Draw Snake Head
-		function drawSnakeElement(svg,snakeElement,headElement){
-			var snakeRect = svgCreateRectangle(snakeElement),
-				snakeSection = {};
+		function drawElement(svg,element){
+			var drawEl = svgCreateRectangle(element);
 
-			svg.appendChild(snakeRect);
-			if(headElement){
-				snakeSection.rect = snakeRect;
-				snakeSection.direction = generateDirection();
+			svg.appendChild(drawEl);
 
-				snake.push(snakeSection);
-			}
+			return drawEl;
 		}
 
 	//Animations ===============================
@@ -89,6 +88,9 @@
 		}
 
 		function animate() {
+			var snakeHead = snake[0];
+
+
 			moveSnake(snake,dimensions,svgWidth,svgHeight);
 		//If there is rotate point
 			rotatePoints.forEach(function(item,i,array){
@@ -101,9 +103,7 @@
 
 					if((currSnakeElX == item.x)&&(currSnakeElY == item.y)){
 						currSnakeEl = changeDirection(currSnakeEl,item.newDirection);
-						/*console.log(item.num,currSnakeEl.direction);*/
 					}
-					/*console.log(currSnakeElX,item.x,currSnakeElY,item.y,i);*/
 					item.num++;
 				}
 
@@ -125,14 +125,26 @@
 				}
 			});
 
-			if (!food){
-				food = generateFoodElement(gridPoints,dimensions,snake);
-				drawSnakeElement(svg,food);
+
+			if(checkHeadAndFoodMerge(snake,food,dimensions,svgWidth,svgHeight)){
+				setPredictablePosition(snakeHead,food,dimensions,svgWidth,svgHeight);
+				food.setAttribute("fill","#000000");
+				addSnakeElement(snake,food,snakeHead.direction);
+				food = drawElement(svg,generateFoodElement(gridPoints,dimensions,snake));
+
+				rotatePoints.forEach(function(item){
+					item.num++;
+				});
+
+				score += scoreUp;
+				if(speed > maxSpeed){
+					speed -= speedUp;
+
+					/*stopAnimation();startAnimation();*/
+				}
+
 			}
-
 		}
-
-		document.addEventListener("keydown",getDirection);
 
 		svgCreateGrid(svg,dimensions);
 
@@ -152,11 +164,17 @@
 		snake.forEach(function(item){
 			svg.appendChild(item.rect);
 		});
-		/*drawSnakeElement(svg,snakeHeadElement,true); //goes to animate??*/
+
 
 		appendToDocumentFragment(createDocumentFragment(svg));
 
 		startAnimation();
+
+		/*addSnakeElement(snake,drawElement(svg,snakeHeadElement)); //goes to animate??*/
+
+		food = drawElement(svg,generateFoodElement(gridPoints,dimensions,snake));
+
+		document.addEventListener("keydown",getDirection);
 	}
 //Create SVG Element ==============================================================
 	function createSVGElement(width,height){
@@ -302,6 +320,21 @@
 		return directions[getRoundedRandom(0,3,true)];
 	}
 
+	function addSnakeElement(snakeArray,snakeElement,direction){
+		var snakeSection = {},
+			length = snakeArray.length;
+
+		direction = direction || "";
+
+		snakeSection.rect = snakeElement;
+		if (length === 0){
+			snakeSection.direction = generateDirection();
+		}else{
+			snakeSection.direction = direction;
+		}
+		snakeArray.unshift(snakeSection);
+	}
+
 //set Snake Element Direction
 	function setDirection(snakeRect,direction,dimensions,svgWidth,svgHeight){
 		switch (direction){
@@ -315,41 +348,57 @@
 				break;
 		}
 	}
-//Move Snake Element direction
-	function moveRight(element,dimensions,svgWidth){
+//Step functions
+	function stepRight(element,dimensions,svgWidth){
 		var currentX = Number(element.getAttribute("x"));
 		currentX += dimensions.cellSideX;
 		if (currentX === svgWidth){
 			currentX = 0;
 		}
-		element.setAttribute("x",currentX);
+		return currentX;
 	}
 
-	function moveLeft(element,dimensions,svgWidth){
+	function stepLeft(element,dimensions,svgWidth){
 		var currentX = Number(element.getAttribute("x"));
 		currentX -= dimensions.cellSideX;
 		if (currentX < 0){
 			currentX = svgWidth - dimensions.cellSideX;
 		}
-		element.setAttribute("x",currentX);
+		return currentX;
 	}
 
-	function moveUp(element,dimensions,svgHeight){
+	function stepUp(element,dimensions,svgHeight){
 		var currentY = Number(element.getAttribute("y"));
 		currentY -= dimensions.cellSideY;
 		if (currentY < 0){
 			currentY = svgHeight - dimensions.cellSideY;
 		}
-		element.setAttribute("y",currentY);
+		return currentY;
+	}
+
+	function stepDown(element,dimensions,svgHeight) {
+		var currentY = Number(element.getAttribute("y"));
+		currentY += dimensions.cellSideY;
+		if (currentY == svgHeight) {
+			currentY = 0;
+		}
+		return currentY;
+	}
+//Move Snake Element direction
+	function moveRight(element,dimensions,svgWidth){
+		element.setAttribute("x",stepRight(element,dimensions,svgWidth));
+	}
+
+	function moveLeft(element,dimensions,svgWidth){
+		element.setAttribute("x",stepLeft(element,dimensions,svgWidth));
+	}
+
+	function moveUp(element,dimensions,svgHeight){
+		element.setAttribute("y",stepUp(element,dimensions,svgHeight));
 	}
 
 	function moveDown(element,dimensions,svgHeight){
-		var currentY = Number(element.getAttribute("y"));
-		currentY += dimensions.cellSideY;
-		if (currentY == svgHeight){
-			currentY = 0;
-		}
-		element.setAttribute("y",currentY);
+		element.setAttribute("y",stepDown(element,dimensions,svgHeight));
 	}
 //Move All Snake Elements
 	function moveSnake(snake,dimensions,svgWidth,svgHeight){
@@ -385,7 +434,7 @@
 	function generateFoodElement(gridPoints,dimensions,snake){
 		var food;
 
-		function checkCoordinates(item,i,array){
+		function checkCoordinates(item){
 			var currSnakeElX = Number(item.rect.getAttribute("x")),
 				currSnakeElY = Number(item.rect.getAttribute("y")),
 				foodX = Number(food.x),
@@ -399,6 +448,57 @@
 		} while (snake.some(checkCoordinates));
 
 		return food;
+	}
+//Check Head and Food position
+	function checkHeadAndFoodMerge(snake,food,dimensions,svgWidth,svgHeight){
+		var snakeHead = snake[0],
+			snakeHeadCoords = {},
+			foodCoords = {};
+
+		foodCoords.x = Number(food.getAttribute("x"));
+		foodCoords.y = Number(food.getAttribute("y"));
+		snakeHeadCoords.x = Number(snakeHead.rect.getAttribute("x"));
+		snakeHeadCoords.y = Number(snakeHead.rect.getAttribute("y"));
+
+		/*snakeHeadCoords = getPredictablePosition(snakeHead,dimensions,svgWidth,svgHeight);*/
+
+		return foodCoords.x === snakeHeadCoords.x && foodCoords.y === snakeHeadCoords.y;
+	}
+//Check Head position + 1 rectangle
+	function setPredictablePosition(snakeElement,food,dimensions,svgWidth,svgHeight){
+		var snakeRect = snakeElement.rect,
+			direction = snakeElement.direction,
+			snakeHeadCoords = {};
+/*
+		function checkXCoordOverlap(){
+			return snakeHeadCoords.x === foodCoords.x;
+		}
+
+		function checkYCoordOverlap(){
+			return snakeHeadCoords.y === foodCoords.y;
+		}*/
+
+		/*snakeHeadCoords.x = Number(snakeRect.getAttribute("x"));
+		snakeHeadCoords.y = Number(snakeRect.getAttribute("y"));*/
+
+		switch (direction){
+			case "up":{
+				food.setAttribute("y",stepUp(snakeRect,dimensions,svgHeight));
+				break;
+			}
+			case "down":{
+				food.setAttribute("y",stepDown(snakeRect,dimensions,svgHeight));
+				break;
+			}
+			case "left":{
+				food.setAttribute("x",stepLeft(snakeRect,dimensions,svgWidth));
+				break;
+			}
+			case "right":{
+				food.setAttribute("x",stepRight(snakeRect,dimensions,svgWidth));
+				break;
+			}
+		}
 	}
 
 	function saveRotatePoint(snakeHead,direction){
