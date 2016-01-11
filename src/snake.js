@@ -2,8 +2,8 @@
 	function startGame(){
 		var svgWidth = 800,
 			svgHeight = svgWidth,
-			numOfCells = 10,
 			svg = createSVGElement(svgWidth,svgHeight),
+			numOfCells = 10,
 			dimensions = calculateDimensions(svg,numOfCells),
 			gridPoints = generateGridPoints(dimensions,svgWidth,svgHeight),
 			snake = [],
@@ -142,9 +142,20 @@
 
 					/*stopAnimation();startAnimation();*/
 				}
+			}
 
+			if(checkCollision(snake)){
+				/*while (svg.firstChild){
+					svg.removeChild(svg.firstChild);
+				}
+				startGame(svg);*/
+				console.log("collision");
 			}
 		}
+
+		/*while (svg.firstChild){
+			svg.removeChild(svg.firstChild);
+		}*/
 
 		svgCreateGrid(svg,dimensions);
 
@@ -165,9 +176,7 @@
 			svg.appendChild(item.rect);
 		});
 
-
 		appendToDocumentFragment(createDocumentFragment(svg));
-
 		startAnimation();
 
 		/*addSnakeElement(snake,drawElement(svg,snakeHeadElement)); //goes to animate??*/
@@ -467,19 +476,7 @@
 //Check Head position + 1 rectangle
 	function setPredictablePosition(snakeElement,food,dimensions,svgWidth,svgHeight){
 		var snakeRect = snakeElement.rect,
-			direction = snakeElement.direction,
-			snakeHeadCoords = {};
-/*
-		function checkXCoordOverlap(){
-			return snakeHeadCoords.x === foodCoords.x;
-		}
-
-		function checkYCoordOverlap(){
-			return snakeHeadCoords.y === foodCoords.y;
-		}*/
-
-		/*snakeHeadCoords.x = Number(snakeRect.getAttribute("x"));
-		snakeHeadCoords.y = Number(snakeRect.getAttribute("y"));*/
+			direction = snakeElement.direction;
 
 		switch (direction){
 			case "up":{
@@ -516,6 +513,17 @@
 			snakeElement.direction = newDirection;
 		}
 		return snakeElement;
+	}
+
+	function checkCollision(snake){
+		return snake.some(function(item,i,array){
+			var headCoordX = array[0].rect.getAttribute("x"),
+				headCoordY = array[0].rect.getAttribute("y"),
+					snakeElCoordX = item.rect.getAttribute("x"),
+					snakeElCoordY = item.rect.getAttribute("y");
+
+			return i !== 0 && headCoordX === snakeElCoordX && headCoordY === snakeElCoordY;
+		});
 	}
 //Utils ===========================================================================
 	function getMin(num1,num2){
