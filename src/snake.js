@@ -29,6 +29,7 @@
 			function changeSnakeDirection(direction){
 				var snakeHead = snake[0];
 				snakeHead = changeDirection(snakeHead,direction);
+				console.log("rotate");
 				rotatePoints.push(saveRotatePoint(snakeHead,direction));
 			}
 
@@ -56,21 +57,25 @@
 				case 38:{
 					direction = "up";
 					setDirection(direction);
+					console.log("up");
 					break;
 				}
 				case 40:{
 					direction = "down";
 					setDirection(direction);
+					console.log("down");
 					break;
 				}
 				case 37:{
 					direction = "left";
 					setDirection(direction);
+					console.log("left");
 					break;
 				}
 				case 39:{
 					direction = "right";
 					setDirection(direction);
+					console.log("right");
 					break;
 				}
 			}
@@ -136,6 +141,13 @@
 				}
 			});
 
+			var str = "";
+
+			snake.forEach(function(item,i){
+				str += String(item.direction)+" "+String(i)+" ";
+			});
+
+			console.log(str);
 
 			stopAnimation();
 
