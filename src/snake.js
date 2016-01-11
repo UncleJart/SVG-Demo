@@ -3,7 +3,7 @@
 		var svgWidth = 800,
 			svgHeight = svgWidth,
 			svg = createSVGElement(svgWidth,svgHeight),
-			numOfCells = 10,
+			numOfCells = 20, //10 or 20
 			dimensions = calculateDimensions(svg,numOfCells),
 			gridPoints = generateGridPoints(dimensions,svgWidth,svgHeight),
 			snake = [],
@@ -16,6 +16,7 @@
 			delay = 150,
 			score = 0,
 			scoreUp = 10,
+			maxScore = 180,
 			timeout,
 			time = new Date().getTime(),
 			keyPressed;
@@ -43,14 +44,6 @@
 			if (!keyPressed) {
 				keyPressed = keyCode;
 			}
-
-			/*clearTimeout(timeout);
-			 timeout = setTimeout(function(){
-			 if(checkDirection(snakeHead,direction)){
-			 keyCode = key;
-			 console.log("Something");
-			 }
-			 },180);*/
 
 			currTime = new Date().getTime();
 
@@ -107,8 +100,7 @@
 		}
 
 		function animate() {
-			var snakeHead = snake[0],
-			checkKey = document.addEventListener("keydown",getDirection);
+			var snakeHead = snake[0];
 
 			moveSnake(snake,dimensions,svgWidth,svgHeight);
 		//If there is rotate point
@@ -163,7 +155,7 @@
 
 				score += scoreUp;
 
-				if(speed > speedUp){
+				if(speed > maxScore){
 					speed -= speedUp;
 				}
 
@@ -180,27 +172,9 @@
 				snake = [];
 				speed = 500;
 
-				/*snake = [
-				 {rect: svgCreateRectangle(new Rectangle(400,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				 direction: "right"},
-				 {rect: svgCreateRectangle(new Rectangle(320,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				 direction: "right"},
-				 {rect: svgCreateRectangle(new Rectangle(240,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				 direction: "right"},
-				 {rect: svgCreateRectangle(new Rectangle(160,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				 direction: "right"},
-				 {rect: svgCreateRectangle(new Rectangle(80,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				 direction: "right"}
-				 ];
-
-				 snake.forEach(function(item){
-				 svg.appendChild(item.rect);
-				 });*/
-
 				addSnakeElement(snake,drawElement(svg,snakeHeadElement));
 
 				food = drawElement(svg,generateFoodElement(gridPoints,dimensions,snake));
-///////////////////
 			}
 
 			startAnimation();
@@ -209,31 +183,15 @@
 
 		svgCreateGrid(svg,dimensions);
 
-		/*snake = [
-			{rect: svgCreateRectangle(new Rectangle(400,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-			direction: "right"},
-			{rect: svgCreateRectangle(new Rectangle(320,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				direction: "right"},
-			{rect: svgCreateRectangle(new Rectangle(240,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				direction: "right"},
-			{rect: svgCreateRectangle(new Rectangle(160,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				direction: "right"},
-			{rect: svgCreateRectangle(new Rectangle(80,0,dimensions.cellSideX,dimensions.cellSideY,"black","white")),
-				direction: "right"}
-		];
-
-		snake.forEach(function(item){
-			svg.appendChild(item.rect);
-		});*/
-
 		addSnakeElement(snake,drawElement(svg,snakeHeadElement));
 
 		appendToDocumentFragment(createDocumentFragment(svg));
-		/*startAnimation();*/
 
 		food = drawElement(svg,generateFoodElement(gridPoints,dimensions,snake));
 
-		/*startAnimation();*/ animate();
+		document.addEventListener("keydown",getDirection);
+
+		animate();
 	}
 //Create SVG Element ==============================================================
 	function createSVGElement(width,height){
@@ -281,6 +239,15 @@
 		this.strokeColor = strokeColor || "black";
 		this.strokeWidth = strokeWidth || 1;
 	}
+
+	function Line(x1,y1,x2,y2,strokeColor,strokeWidth){
+		this.x1 = x1 || 0;
+		this.y1 = y1 || 0;
+		this.x2 = x2 || 0;
+		this.y2 = y2 || 0;
+		this.strokeColor = strokeColor || "black";
+		this.strokeWidth = strokeWidth || 1;
+	}
 //Make Rectangle
 	function svgCreateRectangle(options){
 		var NS = createSVGNS(),
@@ -295,6 +262,20 @@
 		rect.setAttribute("stroke-width",options.strokeWidth);
 
 		return rect;
+	}
+
+	function svgCreateLine(options){
+		var NS = createSVGNS(),
+			line = document.createElementNS(NS,"line");
+
+		line.setAttribute("x1",options.x1);
+		line.setAttribute("y1",options.y1);
+		line.setAttribute("x2",options.x2);
+		line.setAttribute("y2",options.y2);
+		line.setAttribute("stroke",options.strokeColor);
+		line.setAttribute("stroke-width",options.strokeWidth);
+
+		return line;
 	}
 //Calculate minWidth and minHeight ============================
 	function calculateDimensions(svgEl,cellNum){
@@ -316,24 +297,23 @@
 		}
 	}
 //Create SVG Grid
-	function svgCreateGrid(svgEl,dim){ //reWrite to Lines           ===>!!!!!!!!!!!!!!!!!!!!!!!!
-		var width = svgEl.getAttribute("width"),
-			height = svgEl.getAttribute("height"),
+	function svgCreateGrid(svgEl,dim){
+		var width = Number(svgEl.getAttribute("width")),
+			height = Number(svgEl.getAttribute("height")),
 			startX = 0,
 			startY = 0,
-			squareNum,square;
+			line;
 
-		squareNum = (width * height)/(dim.cellSideX * dim.cellSideY);
-
-		for(var count = 1; count <= squareNum; count++){
-			square = new Rectangle(startX,startY,dim.cellSideX,dim.cellSideY);
-			svgEl.appendChild(svgCreateRectangle(square));
+		while (startX <= width){
+			line = new Line(startX,0,startX,height);
+			svgEl.appendChild(svgCreateLine(line));
 			startX += dim.cellSideX;
-			if(startX == width){
+		}
 
-				startX = 0;
-				startY += dim.cellSideY;
-			}
+		while (startY <= height){
+			line = new Line(0,startY,width,startY);
+			svgEl.appendChild(svgCreateLine(line));
+			startY += dim.cellSideY;
 		}
 	}
 //Create Snake
